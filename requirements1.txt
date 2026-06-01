@@ -1,0 +1,10 @@
+# v1 runs on the Python standard library only.
+# No additional packages are required for the first build.
+#
+# Optional future stack for the scalable version:
+# fastapi
+# uvicorn
+# numpy
+# sentence-transformers
+# google-api-python-client
+# youtube-transcript-api

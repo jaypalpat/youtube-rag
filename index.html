@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>YouTube Semantic Search</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2026;
+    --border: #2a2d35;
+    --text: #e8eaf0;
+    --muted: #7a7f8e;
+    --accent: #5b6ef5;
+    --accent-soft: rgba(91,110,245,0.12);
+    --green: #3ecf8e;
+    --amber: #f6c652;
+    --red: #f06060;
+    --radius: 12px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px 80px;
+  }
+
+  /* ── Header ── */
+  .header { text-align: center; margin-bottom: 48px; }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p { color: var(--muted); font-size: 0.95rem; }
+
+  /* ── Search bar ── */
+  .search-wrap {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  input[type="text"] {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-size: 1rem;
+    font-family: var(--font);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button.search-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-family: var(--font);
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  button.search-btn:hover { opacity: 0.88; }
+  button.search-btn:active { transform: scale(0.97); }
+  button.search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Examples ── */
+  .examples {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 36px;
+  }
+  .example-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .example-pill:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ── Status bar ── */
+  .status {
+    width: 100%;
+    max-width: 680px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+    display: none;
+    font-family: var(--mono);
+  }
+  .status.visible { display: block; }
+  .status .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Meta row ── */
+  .meta {
+    width: 100%;
+    max-width: 680px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: none;
+  }
+  .meta.visible { display: flex; gap: 16px; }
+  .meta span { font-family: var(--mono); }
+  .meta b { color: var(--text); }
+
+  /* ── Results ── */
+  .results {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #3a3f4e; }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .card-rank {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 20px;
+    padding-top: 2px;
+  }
+  .card-title {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .card-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .card-title a:hover { color: var(--accent); }
+  .score-badge {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .score-high { background: rgba(62,207,142,0.12); color: var(--green); }
+  .score-mid  { background: rgba(246,198,82,0.12);  color: var(--amber); }
+  .score-low  { background: rgba(240,96,96,0.12);   color: var(--red); }
+
+  .card-channel {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-left: 32px;
+  }
+  .card-snippet {
+    background: var(--surface2);
+    border-left: 2px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    font-family: var(--mono);
+    margin-left: 32px;
+  }
+  .card-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    padding-left: 32px;
+  }
+  .chip {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+  }
+  .open-btn {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 4px 12px;
+    transition: background 0.2s;
+  }
+  .open-btn:hover { background: var(--accent-soft); }
+
+  /* ── Error ── */
+  .error {
+    width: 100%;
+    max-width: 680px;
+    background: rgba(240,96,96,0.08);
+    border: 1px solid rgba(240,96,96,0.25);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    color: var(--red);
+    font-size: 0.9rem;
+    display: none;
+  }
+  .error.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>YouTube <span>Semantic</span> Search</h1>
+  <p>Finds videos by understanding what you mean, not just matching keywords</p>
+</div>
+
+<div class="search-wrap">
+  <input type="text" id="query" placeholder="e.g. deploy NLP model with Flask..." />
+  <button class="search-btn" id="search-btn" onclick="doSearch()">Search</button>
+</div>
+
+<div class="examples" id="examples">
+  <span class="example-pill" onclick="fillExample(this)">sentiment analysis flask deployment</span>
+  <span class="example-pill" onclick="fillExample(this)">React state management beginner</span>
+  <span class="example-pill" onclick="fillExample(this)">binary search tree explained</span>
+  <span class="example-pill" onclick="fillExample(this)">machine learning from scratch python</span>
+  <span class="example-pill" onclick="fillExample(this)">docker kubernetes for beginners</span>
+</div>
+
+<div class="status" id="status">
+  <span class="dot"></span>
+  <span id="status-text">Searching YouTube and ranking by meaning...</span>
+</div>
+
+<div class="meta" id="meta">
+  Searched <b id="m-candidates">0</b> videos · <b id="m-chunks">0</b> transcript chunks
+</div>
+
+<div class="error" id="error-box"></div>
+
+<div class="results" id="results"></div>
+
+<script>
+const API = window.location.origin;
+
+function fillExample(el) {
+  document.getElementById("query").value = el.textContent.trim();
+  document.getElementById("query").focus();
+}
+
+function scoreClass(s) {
+  if (s >= 0.65) return "score-high";
+  if (s >= 0.45) return "score-mid";
+  return "score-low";
+}
+
+function setStatus(msg, visible) {
+  const el = document.getElementById("status");
+  document.getElementById("status-text").textContent = msg;
+  el.className = "status" + (visible ? " visible" : "");
+}
+
+function showError(msg) {
+  const el = document.getElementById("error-box");
+  el.textContent = "⚠ " + msg;
+  el.className = "error visible";
+}
+
+function clearError() {
+  document.getElementById("error-box").className = "error";
+}
+
+async function doSearch() {
+  const query = document.getElementById("query").value.trim();
+  if (!query) return;
+
+  clearError();
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("meta").className = "meta";
+  setStatus("Expanding query and fetching YouTube candidates...", true);
+  document.getElementById("search-btn").disabled = true;
+
+  const steps = [
+    [2000, "Downloading transcripts and chunking text..."],
+    [5000, "Embedding transcript chunks with sentence-transformers..."],
+    [9000, "Running FAISS similarity search and ranking..."],
+  ];
+  steps.forEach(([delay, msg]) => setTimeout(() => setStatus(msg, true), delay));
+
+  try {
+    const resp = await fetch(`${API}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, top_n: 5 }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: "Server error" }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    setStatus("Done!", false);
+
+    if (data.warning) {
+      showError(data.warning);
+    }
+
+    // Meta row
+    document.getElementById("m-candidates").textContent = data.total_candidates;
+    document.getElementById("m-chunks").textContent = data.total_chunks;
+    document.getElementById("meta").className = "meta visible";
+
+    // Render results
+    const container = document.getElementById("results");
+    if (!data.results || data.results.length === 0) {
+      container.innerHTML = `<div class="card" style="color:var(--muted);text-align:center;padding:32px">
+        No results found. Try a different query.</div>`;
+      return;
+    }
+
+    data.results.forEach((r, i) => {
+      const scoreLabel = (r.final_score * 100).toFixed(0) + "% match";
+      const cls = scoreClass(r.final_score);
+      const snippet = r.matched_snippet.length > 220
+        ? r.matched_snippet.slice(0, 220) + "…"
+        : r.matched_snippet;
+
+      container.innerHTML += `
+        <div class="card">
+          <div class="card-top">
+            <span class="card-rank">#${i+1}</span>
+            <span class="card-title">
+              <a href="${r.url}" target="_blank">${r.title}</a>
+            </span>
+            <span class="score-badge ${cls}">${scoreLabel}</span>
+          </div>
+          <div class="card-channel">📺 ${r.channel}</div>
+          <div class="card-snippet">"${snippet}"</div>
+          <div class="card-footer">
+            <span class="chip">best: ${(r.best_chunk_score*100).toFixed(0)}%</span>
+            <a class="open-btn" href="${r.url}" target="_blank">Watch ↗</a>
+          </div>
+        </div>`;
+    });
+
+  } catch (err) {
+    setStatus("", false);
+    showError(err.message || "Could not reach the API server. Is uvicorn running?");
+  } finally {
+    document.getElementById("search-btn").disabled = false;
+  }
+}
+
+document.getElementById("query").addEventListener("keydown", e => {
+  if (e.key === "Enter") doSearch();
+});
+</script>
+</body>
+</html>
